@@ -35,12 +35,23 @@ import com.google.android.gms.ads.LoadAdError
 import com.google.android.gms.ads.rewarded.RewardedAd
 import com.google.android.gms.ads.rewarded.RewardedAdLoadCallback
 import com.google.android.material.bottomsheet.BottomSheetDialog
+import com.google.android.material.snackbar.Snackbar
+import com.google.firebase.database.DataSnapshot
+import com.google.firebase.database.DatabaseError
+import com.google.firebase.database.FirebaseDatabase
+import com.google.firebase.database.ValueEventListener
+import com.google.firebase.database.ktx.database
+import com.google.firebase.ktx.Firebase
 import com.odukle.captiongpt.databinding.FragmentMainBinding
 import com.odukle.captiongpt.databinding.LayoutBottomSheetBinding
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.math.abs
+import kotlin.properties.Delegates
+
 
 private const val TAG = "FragmentMain"
 private const val OPENAI_API_MD_KEY = "OPENAI_API_KEY"
@@ -59,9 +70,13 @@ class FragmentMain : Fragment() {
     private lateinit var adRequest: AdRequest
     private var isAdLoading = true
     private var adRequested = false
-    private var tokens = 1000
-    private val skuList = listOf("sku20","sku50","sku80")
+    private var tokens by Delegates.notNull<Int>()
+    private val skuList = listOf("sku20", "sku50", "sku80")
     private var productDetailsList: MutableList<SkuDetails>? = null
+
+    //Firebase
+    private lateinit var database: FirebaseDatabase
+    private lateinit var uuid: String
 
     // Billing related
     private lateinit var billingClient: BillingClient
@@ -88,6 +103,10 @@ class FragmentMain : Fragment() {
         binding = FragmentMainBinding.inflate(inflater, container, false)
         activityResultLauncher = registerActivityResultLauncher()
 
+        database = Firebase.database
+        uuid = getDeviceUUID(requireContext())
+        restoreTokens()
+
         setUpBillingClient()
         adRequest = AdRequest.Builder().build()
         loadAd()
@@ -111,13 +130,16 @@ class FragmentMain : Fragment() {
         }
 
         binding.btnGenerateCaptions.setOnClickListener {
-
-            if (tokens >= 1000) {
+            val num = binding.tvNoOfCaption.text.toString().toInt()
+            if (tokens >= 250*num) {
                 adRequested = false
                 generateCaptions()
             } else {
-                adRequested = true
-                showAd(true)
+                val text = "You need minimum ${num*250} tokens to generate $num captions, you can watch an ad to get 800 tokens"
+                Snackbar.make(binding.rvMain,text,Snackbar.LENGTH_LONG).setAction("Watch Ad") {
+                    adRequested = true
+                    showAd(true)
+                }.show()
             }
         }
 
@@ -171,9 +193,10 @@ class FragmentMain : Fragment() {
                                 viewModel.generateImageDescription(uri, requireActivity(), openApiKey, awsKey, awsSecretKey)
                             } catch (e: Exception) {
                                 requireActivity().runOnUiThread {
-                                    Toast.makeText(requireContext(), "${e.message}", Toast.LENGTH_SHORT).show()
+                                    context?.longToast("196 : ${e.message}")
                                     binding.progressBar.hide()
                                 }
+                                throw e
                             }
                         }
                     }
@@ -274,7 +297,7 @@ class FragmentMain : Fragment() {
         if (tone == "Neutral") tone = ""
 
         try {
-            imageDescription?.let { it1 -> viewModel.generateCaptions(it1,noOfCaptions,tone, requireActivity(), openApiKey) }
+            imageDescription?.let { it1 -> viewModel.generateCaptions(it1, noOfCaptions, tone, requireActivity(), openApiKey) }
         } catch (e: Exception) {
             requireActivity().runOnUiThread {
                 Toast.makeText(requireContext(), "${e.message}", Toast.LENGTH_SHORT).show()
@@ -300,14 +323,23 @@ class FragmentMain : Fragment() {
         updateTokens(-1 * tokensUsed)
     }
 
-    private fun updateTokens(amount: Int, updateBottomSheet: Boolean = false) {
-        tokens += amount
-        context?.putPreferences(TOKEN_PREF, TOKENS, tokens.toString())
-        if (amount > 0) context?.longToast("Hurray 🎉 you earned 800 tokens")
-        else context?.longToast("you used ${abs(amount)} tokens, tokens left: $tokens")
+    private fun updateTokens(amount: Int, updateBottomSheet: Boolean = false, updateDataBase: Boolean = true) {
+        Log.d(TAG, "updateTokens: called")
+        if (updateDataBase) {
+            tokens += amount
+            if (amount > 0) context?.longToast("Hurray 🎉 you earned $amount tokens")
+            else context?.longToast("you used ${abs(amount)} tokens, tokens left: $tokens")
+
+            // Write tokens to the database
+            val userRef = database.getReference(uuid)
+            userRef.setValue(tokens)
+        }
+
         if (updateBottomSheet) {
             bottomSheetBinding.tvTokens.text = "You have $tokens tokens left"
         }
+
+        context?.putPreferences(TOKEN_PREF, TOKENS, tokens.toString())
     }
 
     private fun showBottomSheetDialog() {
@@ -422,13 +454,24 @@ class FragmentMain : Fragment() {
                     purchase.products.forEach {
                         when (it) {
                             SKU20 -> {
-                                updateTokens(10000,true)
+                                MainScope().launch {
+                                    delay(500)
+                                    updateTokens(10000, true)
+                                }
                             }
+
                             SKU50 -> {
-                                updateTokens(30000,true)
+                                MainScope().launch {
+                                    delay(500)
+                                    updateTokens(30000, true)
+                                }
                             }
+
                             SKU80 -> {
-                                updateTokens(60000,true)
+                                MainScope().launch {
+                                    delay(500)
+                                    updateTokens(60000, true)
+                                }
                             }
                         }
                     }
@@ -444,6 +487,28 @@ class FragmentMain : Fragment() {
     private fun updateUI(skuDetails: SkuDetails?) {
         skuDetails?.let {
 
+        }
+    }
+
+    private fun restoreTokens() {
+        try {
+            val userRef = database.getReference(uuid)
+            userRef.addValueEventListener(object : ValueEventListener {
+                override fun onDataChange(dataSnapshot: DataSnapshot) {
+                    // This method is called once with the initial value and again
+                    // whenever data at this location is updated.
+                    tokens = (dataSnapshot.getValue(Long::class.java) ?: 1000).toInt()
+                    Log.d(TAG, "onDataChange: tokens >>>>>>>>>>>>> $tokens")
+                    updateTokens(tokens, updateDataBase = false)
+                }
+
+                override fun onCancelled(error: DatabaseError) {
+                    // Failed to read value
+                    Log.w(TAG, "Failed to read value.", error.toException())
+                }
+            })
+        } catch (e: Exception) {
+            context?.longToast("510 : ${e.message.toString()}")
         }
     }
 

@@ -33,9 +33,6 @@ import java.time.Duration
 import java.util.Locale
 import kotlin.math.sqrt
 
-//const val OPENAI_API_KEY = "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"
-//const val AWS_KEY = "AKIAU2ZWZCZLQIXLSQP3"
-//const val AWS_SECRET_KEY = "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"
 private const val TAG = "FragmentMainViewModel"
 
 class FragmentMainViewModel : ViewModel() {
@@ -68,6 +65,7 @@ class FragmentMainViewModel : ViewModel() {
 
         // Generate a prompt by concatenating the image labels
         val prompt = "Generate an image caption for the following image labels: ${imageLabels.joinToString(", ")}"
+        Log.d(TAG, "generateImageDescription: $prompt")
 
         // Use the OpenAI API to generate image captions
         val openaiApi = OpenAiService(OPENAI_API_KEY)
