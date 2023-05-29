@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "287435921992",
+    "project_id": "captiongpt-607a5",
+    "storage_bucket": "captiongpt-607a5.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:287435921992:android:62b6812bbbc0f84617167d",
+        "android_client_info": {
+          "package_name": "com.odukle.captiongpt"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBwdjUh994ErBIzfb5BNkDKsiUqJmPQ0Wk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

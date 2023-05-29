@@ -1,0 +1,31 @@
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- Base application theme. -->
+    <style name="Theme.CaptionGPT" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <!-- Primary brand color. -->
+        <item name="colorPrimary">@color/primary_color</item>
+        <item name="colorPrimaryVariant">@color/dark_primary_color</item>
+        <item name="colorOnPrimary">@color/black</item>
+        <!-- Secondary brand color. -->
+        <item name="colorSecondary">@color/secondary_color</item>
+        <item name="colorSecondaryVariant">@color/secondary_color</item>
+        <item name="colorOnSecondary">@color/black</item>
+        <!-- Status bar color. -->
+        <item name="android:statusBarColor">@color/windowBg</item>
+        <!-- Customize your theme here. -->
+        <item name="android:windowBackground">@color/windowBg</item>
+    </style>
+
+    <style name="ImageViewStyle">
+        <item name="cornerSizeTopRight">20dp</item>
+        <item name="cornerSizeTopLeft">20dp</item>
+        <item name="android:foreground">@drawable/transparent_gradient_dark</item>
+    </style>
+
+    <style name="BottomAppBar" parent="Widget.MaterialComponents.BottomAppBar">
+        <item name="colorPrimary">@color/primary_color</item>
+    </style>
+
+    <style name="BottomSheet">
+        <item name="android:background">@color/windowBg</item>
+    </style>
+</resources>
