@@ -24,7 +24,7 @@ import com.google.firebase.ktx.Firebase
 import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider
 
 private const val TAG = "MainActivity"
-const val REWARDED_AD_ID = "ca-app-pub-3940256099942544/5224354917"
+const val REWARDED_AD_ID = "ca-app-pub-9193191601772541/6216223593"
 
 class MainActivity : AppCompatActivity() {
 
