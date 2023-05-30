@@ -1,3 +1,5 @@
 <resources>
     <string name="app_name">CaptionGPT</string>
+    <string name="tokens_desc">What are tokens?\nTokens are the basic unit that GPT models use to compute the length of a text, a 1000 tokens are equivalent to 750 characters including prompt and response.</string>
+    <string name="built_with"><![CDATA[</> Built with aws rekognition and gpt-3.5-turbo </>]]></string>
 </resources>

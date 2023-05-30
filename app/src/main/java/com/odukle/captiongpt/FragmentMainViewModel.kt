@@ -11,12 +11,15 @@ import androidx.annotation.RequiresApi
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
+import com.amazonaws.AmazonWebServiceRequest
 import com.amazonaws.auth.AWSCredentials
 import com.amazonaws.auth.AWSCredentialsProvider
+import com.amazonaws.event.ProgressListener
 import com.amazonaws.services.rekognition.AmazonRekognitionClient
 import com.amazonaws.services.rekognition.model.DetectLabelsRequest
 import com.amazonaws.services.rekognition.model.Image
 import com.amazonaws.services.rekognition.model.Label
+import com.amazonaws.services.rekognition.model.StartLabelDetectionRequest
 import com.theokanning.openai.completion.CompletionRequest
 import com.theokanning.openai.completion.CompletionResult
 import com.theokanning.openai.completion.chat.ChatCompletionRequest

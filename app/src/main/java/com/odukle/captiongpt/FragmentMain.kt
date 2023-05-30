@@ -34,6 +34,7 @@ import com.google.android.gms.ads.FullScreenContentCallback
 import com.google.android.gms.ads.LoadAdError
 import com.google.android.gms.ads.rewarded.RewardedAd
 import com.google.android.gms.ads.rewarded.RewardedAdLoadCallback
+import com.google.android.material.behavior.HideBottomViewOnScrollBehavior
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.snackbar.Snackbar
 import com.google.firebase.database.DataSnapshot
@@ -124,38 +125,58 @@ class FragmentMain : Fragment() {
 
         // Set on click listeners
         binding.btnChooseImage.setOnClickListener {
-            binding.progressBar.show()
             val intent = Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI)
             activityResultLauncher.launch(intent)
         }
 
+        binding.btnRetry.setOnClickListener {
+            getImageDescription()
+        }
+
         binding.btnGenerateCaptions.setOnClickListener {
-            val num = binding.tvNoOfCaption.text.toString().toInt()
-            if (tokens >= 250*num) {
+            val numStr = binding.tvNoOfCaption.text.toString()
+            val num = if (numStr.isEmpty()) 4 else numStr.toInt()
+            if (tokens >= 250 * num) {
                 adRequested = false
                 generateCaptions()
             } else {
-                val text = "You need minimum ${num*250} tokens to generate $num captions, you can watch an ad to get 800 tokens"
-                Snackbar.make(binding.rvMain,text,Snackbar.LENGTH_LONG).setAction("Watch Ad") {
+                val text = "minimum ${num * 250} tokens needed for $num captions, you have $tokens tokens"
+                Snackbar.make(binding.rvMain, text, Snackbar.LENGTH_LONG).setAction("Watch Ad") {
                     adRequested = true
-                    showAd(true)
+                    val areTokensEnough = tokens + 800 >= num * 250
+                    showAd(areTokensEnough)
                 }.show()
             }
         }
 
-        binding.bottomAppBar.menu.forEach {
-            when (it.itemId) {
-                R.id.token -> {
-                    it.setOnMenuItemClickListener {
+        binding.bottomAppBar.menu.forEach { menuItem ->
+            menuItem.setOnMenuItemClickListener {
+                when (it.itemId) {
+                    R.id.token -> {
                         showBottomSheetDialog()
-                        false
+                    }
+
+                    R.id.share -> {
+                        val url = "Check out this awesome app \nhttps://play.google.com/store/apps/details?id=com.odukle.captiongpt"
+                        val shareIntent = Intent(Intent.ACTION_SEND)
+                        shareIntent.type = "text/plain"
+                        shareIntent.putExtra(Intent.EXTRA_TEXT, url)
+                        startActivity(Intent.createChooser(shareIntent, "Share Via"))
+                    }
+
+                    R.id.follow -> {
+                        val url = "https://instagram.com/odukle.jpg"
+                        openInBrowser(url, requireContext())
+                    }
+
+                    R.id.github -> {
+                        val url = "https://github.com/odukle/CaptionGPT"
+                        openInBrowser(url, requireContext())
                     }
                 }
-
-                R.id.share -> {
-
-                }
+                false
             }
+
         }
 
         viewModel.getDescription().observe(viewLifecycleOwner) {
@@ -177,31 +198,43 @@ class FragmentMain : Fragment() {
         return registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { activityResult ->
             if (activityResult.resultCode == Activity.RESULT_OK) {
                 imageUri = activityResult.data?.data
-                imageUri?.let { uri ->
-                    if (Build.VERSION.SDK_INT <= 28) {
-                        val bitmap = MediaStore.Images.Media.getBitmap(
-                            requireActivity().contentResolver,
-                            imageUri
-                        )
-                        binding.ivImage.setImageBitmap(bitmap)
-                    } else {
-                        val source = ImageDecoder.createSource(requireActivity().contentResolver, imageUri!!)
-                        val bitmap = ImageDecoder.decodeBitmap(source)
-                        binding.ivImage.setImageBitmap(bitmap)
-                        CoroutineScope(Dispatchers.IO).launch {
-                            try {
-                                viewModel.generateImageDescription(uri, requireActivity(), openApiKey, awsKey, awsSecretKey)
-                            } catch (e: Exception) {
-                                requireActivity().runOnUiThread {
-                                    context?.longToast("196 : ${e.message}")
-                                    binding.progressBar.hide()
-                                }
-                                throw e
-                            }
+                getImageDescription()
+            }
+        }
+    }
+
+    private fun getImageDescription() {
+        imageUri?.let { uri ->
+            if (Build.VERSION.SDK_INT <= 28) {
+                val bitmap = MediaStore.Images.Media.getBitmap(
+                    requireActivity().contentResolver,
+                    imageUri
+                )
+                binding.ivImage.setImageBitmap(bitmap)
+            } else {
+                val source = ImageDecoder.createSource(requireActivity().contentResolver, imageUri!!)
+                val bitmap = ImageDecoder.decodeBitmap(source)
+                binding.ivImage.setImageBitmap(bitmap)
+                CoroutineScope(Dispatchers.IO).launch {
+                    try {
+                        viewModel.generateImageDescription(uri, requireActivity(), openApiKey, awsKey, awsSecretKey)
+                    } catch (e: Exception) {
+                        requireActivity().runOnUiThread {
+                            context?.longToast(e.message.toString())
+                            binding.progressBar.hide()
+                            // Retry if Exception
+                            binding.btnRetry.show()
                         }
                     }
                 }
             }
+            binding.progressBar.show()
+            binding.tvLoading.text = "generating image description..."
+            binding.layoutTones.hide()
+            binding.rvMain.hide()
+            binding.btnGenerateCaptions.hide()
+            binding.tvDescription.hide()
+            binding.btnRetry.hide()
         }
     }
 
@@ -231,6 +264,7 @@ class FragmentMain : Fragment() {
             override fun onAdLoaded(ad: RewardedAd) {
                 Log.d(TAG, "Ad was loaded.")
                 rewardedAd = ad
+                rewardedAdCallback()
                 isAdLoading = false
                 if (adRequested) showAd(true)
             }
@@ -241,30 +275,25 @@ class FragmentMain : Fragment() {
         rewardedAd?.fullScreenContentCallback = object : FullScreenContentCallback() {
             override fun onAdClicked() {
                 // Called when a click is recorded for an ad.
-                Log.d(TAG, "Ad was clicked.")
             }
 
             override fun onAdDismissedFullScreenContent() {
                 // Called when ad is dismissed.
                 // Set the ad reference to null so you don't show the ad a second time.
-                Log.d(TAG, "Ad dismissed fullscreen content.")
                 rewardedAd = null
             }
 
             override fun onAdFailedToShowFullScreenContent(p0: AdError) {
                 // Called when ad fails to show.
-                Log.e(TAG, "Ad failed to show fullscreen content.")
                 rewardedAd = null
             }
 
             override fun onAdImpression() {
                 // Called when an impression is recorded for an ad.
-                Log.d(TAG, "Ad recorded an impression.")
             }
 
             override fun onAdShowedFullScreenContent() {
                 // Called when ad is shown.
-                Log.d(TAG, "Ad showed fullscreen content.")
             }
         }
     }
@@ -302,6 +331,7 @@ class FragmentMain : Fragment() {
             requireActivity().runOnUiThread {
                 Toast.makeText(requireContext(), "${e.message}", Toast.LENGTH_SHORT).show()
                 binding.progressBar.hide()
+                binding.btnGenerateCaptions.show()
                 binding.btnGenerateCaptions.text = "Retry"
             }
         }
@@ -317,6 +347,7 @@ class FragmentMain : Fragment() {
         binding.progressBar.hide()
         binding.btnGenerateCaptions.show()
         binding.layoutTones.show()
+        binding.rvMain.show()
         binding.btnGenerateCaptions.text = "Generate Captions"
 
         val tokensUsed: Int = (1000 / 750) * (captions.length) + 100 + (imageDescription?.length ?: 0)
@@ -336,7 +367,7 @@ class FragmentMain : Fragment() {
         }
 
         if (updateBottomSheet) {
-            bottomSheetBinding.tvTokens.text = "You have $tokens tokens left"
+            bottomSheetBinding.tvTokens.setBoldText("You have $tokens tokens left", tokens.toString())
         }
 
         context?.putPreferences(TOKEN_PREF, TOKENS, tokens.toString())
@@ -349,7 +380,7 @@ class FragmentMain : Fragment() {
         bottomSheetDialog.show()
 
         bottomSheetBinding.apply {
-            tvTokens.text = "You have $tokens tokens left"
+            tvTokens.setBoldText("You have $tokens tokens left", tokens.toString())
 
             btnWatchAd.setOnClickListener {
                 showAd(generateCaptions = false, true)

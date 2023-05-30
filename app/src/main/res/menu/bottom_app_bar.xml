@@ -6,11 +6,23 @@
         android:title="Tokens"
         android:id="@+id/token"
         android:icon="@drawable/ic_token"
-        app:showAsAction="always|withText"/>
+        app:showAsAction="always"/>
 
     <item
         android:title="Share"
         android:icon="@drawable/ic_share_24"
         android:id="@+id/share"
+        app:showAsAction="ifRoom"/>
+
+    <item
+        android:title="Follow"
+        android:icon="@drawable/ic_instagram"
+        android:id="@+id/follow"
+        app:showAsAction="ifRoom"/>
+
+    <item
+        android:title="Github"
+        android:icon="@drawable/ic_github"
+        android:id="@+id/github"
         app:showAsAction="always"/>
 </menu>

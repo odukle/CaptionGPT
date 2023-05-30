@@ -28,4 +28,10 @@
     <style name="BottomSheet">
         <item name="android:background">@color/windowBg</item>
     </style>
+
+    <style name="CardViewStyle">
+        <item name="strokeWidth">2dp</item>
+        <item name="strokeColor">@color/primary_text_dark</item>
+        <item name="backgroundColor">@color/windowBg</item>
+    </style>
 </resources>
