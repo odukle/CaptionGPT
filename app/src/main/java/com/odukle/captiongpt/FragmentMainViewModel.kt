@@ -43,7 +43,7 @@ class FragmentMainViewModel : ViewModel() {
     private val captionLiveData = MutableLiveData<String>()
 
     fun generateImageDescription(imageUri: Uri, activity: FragmentActivity, OPENAI_API_KEY: String, AWS_KEY: String, AWS_SECRET_KEY: String) {
-
+        Log.d(TAG, "generateImageDescription: called")
         val rekognitionClient = getAWSRecognitionClient(AWS_KEY, AWS_SECRET_KEY)
         // Read the image file into bytes
         val inputStream = activity.contentResolver.openInputStream(imageUri)
@@ -66,6 +66,7 @@ class FragmentMainViewModel : ViewModel() {
             imageLabels.add(label.name.lowercase(Locale.ROOT))
         }
 
+        Log.d(TAG, "generateImageDescription: $imageLabels")
         // Generate a prompt by concatenating the image labels
         val prompt = "Generate an image caption for the following image labels: ${imageLabels.joinToString(", ")}"
         Log.d(TAG, "generateImageDescription: $prompt")

@@ -215,19 +215,21 @@ class FragmentMain : Fragment() {
                 val source = ImageDecoder.createSource(requireActivity().contentResolver, imageUri!!)
                 val bitmap = ImageDecoder.decodeBitmap(source)
                 binding.ivImage.setImageBitmap(bitmap)
-                CoroutineScope(Dispatchers.IO).launch {
-                    try {
-                        viewModel.generateImageDescription(uri, requireActivity(), openApiKey, awsKey, awsSecretKey)
-                    } catch (e: Exception) {
-                        requireActivity().runOnUiThread {
-                            context?.longToast(e.message.toString())
-                            binding.progressBar.hide()
-                            // Retry if Exception
-                            binding.btnRetry.show()
-                        }
+            }
+
+            CoroutineScope(Dispatchers.IO).launch {
+                try {
+                    viewModel.generateImageDescription(uri, requireActivity(), openApiKey, awsKey, awsSecretKey)
+                } catch (e: Exception) {
+                    requireActivity().runOnUiThread {
+                        context?.longToast(e.message.toString())
+                        binding.progressBar.hide()
+                        // Retry if Exception
+                        binding.btnRetry.show()
                     }
                 }
             }
+
             binding.progressBar.show()
             binding.tvLoading.text = "generating image description..."
             binding.layoutTones.hide()
